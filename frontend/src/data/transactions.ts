@@ -1,0 +1,60 @@
+import type { Transaction } from '../types';
+
+export const transactions: Transaction[] = [
+  {
+    id: 1,
+    date: 'May 26, 2025',
+    description: 'Salary',
+    category: 'Salary',
+    amount: 1200,
+    type: 'income',
+  },
+  {
+    id: 2,
+    date: 'May 25, 2025',
+    description: 'Groceries',
+    category: 'Food',
+    amount: 80,
+    type: 'expense',
+  },
+  {
+    id: 3,
+    date: 'May 20, 2025',
+    description: 'Freelance work',
+    category: 'Salary',
+    amount: 300,
+    type: 'income',
+  },
+  {
+    id: 4,
+    date: 'May 18, 2025',
+    description: 'Electricity Bill',
+    category: 'Utilities',
+    amount: 60,
+    type: 'expense',
+  },
+  {
+    id: 5,
+    date: 'May 17, 2025',
+    description: 'Dinner Out',
+    category: 'Food',
+    amount: 45,
+    type: 'expense',
+  },
+  {
+    id: 6,
+    date: 'May 15, 2025',
+    description: 'Gas',
+    category: 'Transport',
+    amount: 40,
+    type: 'expense',
+  },
+  {
+    id: 7,
+    date: 'May 10, 2025',
+    description: 'Netflix',
+    category: 'Entertainment',
+    amount: 15,
+    type: 'expense',
+  },
+];
