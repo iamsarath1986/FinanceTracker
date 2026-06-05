@@ -1,124 +1,280 @@
-# FinanceTracker Vue + FastAPI Project Plan
+# FinanceTracker — Full Implementation Plan
 
-## Summary
+## Context
 
-Build FinanceTracker as a full-stack personal finance MVP with a Vue 3 + Vite + TypeScript frontend and a FastAPI backend. The first implementation should create a clean project scaffold, JWT authentication, CRUD flows for accounts/categories/transactions/budgets, and dashboard summaries. CSV import/export and richer reports can follow after the core data model is stable.
+Personal finance tracker for a single user managing income, expenses, and deposit accounts (savings, investments) across multiple banks in different countries. Accounts may hold different currencies. The app needs budgets at multiple scopes (monthly/annual × category/account), recurring transactions, and a dashboard summary. No multi-user support — auth is a simple PIN stored in `.env`. Frontend is Vue 3 + TypeScript + Vite + PrimeVue. Backend is FastAPI + SQLAlchemy + SQLite (dev).
 
-Assume the current root `main.py` is only a PyCharm placeholder and should be replaced by the planned `backend/` application structure.
+**Phase 2 (out of scope here):** account-to-account transfers, live exchange-rate conversions.
 
-## Key Changes
+---
 
-- Create a `backend/` FastAPI app with:
-  - `app/main.py` FastAPI entrypoint
-  - `app/api/` route modules
-  - `app/core/` settings, security, JWT config
-  - `app/db/` session and database setup
-  - `app/models/` SQLAlchemy ORM models
-  - `app/schemas/` Pydantic request/response schemas
-  - `app/services/` business logic
-  - `app/tests/` pytest tests
-  - `alembic/` migrations
+## Project Structure
 
-- Create a `frontend/` Vue app with:
-  - Vue 3, Vite, TypeScript
-  - Vue Router for pages
-  - Pinia for auth/session and app state
-  - Axios API client
-  - Page structure for login, register, dashboard, accounts, categories, transactions, budgets, and reports
+```
+FinanceTracker/
+├── backend/
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── api/
+│   │   │   ├── auth.py
+│   │   │   ├── accounts.py
+│   │   │   ├── categories.py
+│   │   │   ├── transactions.py
+│   │   │   ├── recurring.py
+│   │   │   ├── budgets.py
+│   │   │   └── dashboard.py
+│   │   ├── core/
+│   │   │   ├── config.py        # pydantic-settings: APP_PIN, DATABASE_URL, SECRET_KEY
+│   │   │   └── security.py      # PIN verify, JWT create/decode, get_current_session dep
+│   │   ├── db/
+│   │   │   └── session.py       # SQLAlchemy engine + SessionLocal + Base
+│   │   ├── models/
+│   │   │   ├── account.py
+│   │   │   ├── category.py
+│   │   │   ├── transaction.py
+│   │   │   ├── recurring.py
+│   │   │   └── budget.py
+│   │   ├── schemas/
+│   │   │   ├── account.py
+│   │   │   ├── category.py
+│   │   │   ├── transaction.py
+│   │   │   ├── recurring.py
+│   │   │   ├── budget.py
+│   │   │   └── dashboard.py
+│   │   ├── services/
+│   │   │   ├── dashboard.py     # summary query logic
+│   │   │   └── recurring.py     # generate due transactions
+│   │   └── tests/
+│   │       ├── conftest.py
+│   │       ├── test_auth.py
+│   │       ├── test_accounts.py
+│   │       ├── test_transactions.py
+│   │       └── test_budgets.py
+│   ├── alembic/
+│   ├── alembic.ini
+│   ├── requirements.txt
+│   └── .env                     # APP_PIN, SECRET_KEY, DATABASE_URL
+├── frontend/
+│   ├── src/
+│   │   ├── main.ts
+│   │   ├── App.vue
+│   │   ├── router/index.ts
+│   │   ├── stores/
+│   │   │   └── auth.ts          # Pinia: token, isAuthenticated, login(), logout()
+│   │   ├── api/
+│   │   │   ├── client.ts        # Axios instance with Bearer token interceptor
+│   │   │   ├── accounts.ts
+│   │   │   ├── categories.ts
+│   │   │   ├── transactions.ts
+│   │   │   ├── recurring.ts
+│   │   │   ├── budgets.ts
+│   │   │   └── dashboard.ts
+│   │   ├── pages/
+│   │   │   ├── LoginPage.vue
+│   │   │   ├── DashboardPage.vue
+│   │   │   ├── AccountsPage.vue
+│   │   │   ├── CategoriesPage.vue
+│   │   │   ├── TransactionsPage.vue
+│   │   │   ├── RecurringPage.vue
+│   │   │   ├── BudgetsPage.vue
+│   │   │   └── ReportsPage.vue
+│   │   ├── components/
+│   │   │   ├── layout/
+│   │   │   │   ├── AppSidebar.vue
+│   │   │   │   └── AppTopbar.vue
+│   │   │   └── dashboard/
+│   │   │       ├── BalanceCard.vue
+│   │   │       ├── CashFlowChart.vue   # PrimeVue Chart.js wrapper
+│   │   │       └── BudgetProgress.vue
+│   │   └── types/index.ts       # TypeScript interfaces mirroring backend schemas
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── tsconfig.json
+└── README.md
+```
 
-- Use SQLite for local development by default and keep configuration compatible with PostgreSQL for production.
+---
 
-## Backend Plan
+## Data Models
 
-- Dependencies:
-  - `fastapi`, `uvicorn`
-  - `sqlalchemy`, `alembic`
-  - `pydantic-settings`
-  - `python-jose` or `pyjwt` for JWT
-  - `passlib[bcrypt]` for password hashing
-  - `pytest`, `httpx`
+### Account
+```
+id, name, type (savings|investments|checking|credit_card|cash),
+bank_name, country (ISO 3166), currency (ISO 4217),
+opening_balance (Decimal), created_at, updated_at
 
-- Core entities:
-  - `User`: email, hashed password, timestamps
-  - `Account`: user-owned account name, type, currency, opening/current balance
-  - `Category`: user-owned category name, type `income` or `expense`
-  - `Transaction`: account, optional category, amount, type, date, description
-  - `Budget`: category, period/month, limit amount
-  - Dashboard summary derived from transactions and budgets
+current_balance is computed: opening_balance + SUM(income) - SUM(expenses)
+```
 
-- API routes:
-  - `POST /auth/register`
-  - `POST /auth/login`
-  - `GET /auth/me`
-  - CRUD routes for `/accounts`, `/categories`, `/transactions`, `/budgets`
-  - `GET /dashboard/summary`
-  - Later: `/reports`, `/import`, `/export`
+### Category
+```
+id, name, type (income|expense), color (hex), icon
+Default categories seeded on first run.
+```
 
-- Behavior:
-  - All finance data is scoped to the authenticated user.
-  - JWT bearer token protects private endpoints.
-  - Server validates ownership before reading, updating, or deleting records.
-  - Transactions update dashboard summaries through queries, not duplicated stored totals for MVP.
+### Transaction
+```
+id, account_id (FK), category_id (FK nullable),
+amount (Decimal, always positive), type (income|expense),
+date, description, is_recurring (bool), recurring_id (FK nullable),
+created_at
+```
 
-## Frontend Plan
+### RecurringTransaction
+```
+id, account_id (FK), category_id (FK nullable),
+amount (Decimal), type (income|expense), description,
+frequency (daily|weekly|monthly|yearly),
+start_date, end_date (nullable), last_generated_date (nullable),
+is_active (bool)
+```
 
-- Pages:
-  - `LoginPage`
-  - `RegisterPage`
-  - `DashboardPage`
-  - `AccountsPage`
-  - `CategoriesPage`
-  - `TransactionsPage`
-  - `BudgetsPage`
-  - `ReportsPage`
+### Budget
+```
+id, name,
+scope_type (category|account),
+period_type (monthly|annual),
+category_id (FK nullable),   -- set when scope_type = category
+account_id (FK nullable),    -- set when scope_type = account
+year (int), month (int nullable),  -- month=null for annual budgets
+limit_amount (Decimal), currency (display only)
 
-- Layout:
-  - Auth pages use a minimal centered form.
-  - App pages use a persistent sidebar/top navigation.
-  - Dashboard shows account balances, income, expenses, net cash flow, budget progress, and recent transactions.
+spent is computed at query time from transactions
+```
 
-- State and API:
-  - Pinia `authStore` stores token and current user.
-  - Axios instance injects `Authorization: Bearer <token>`.
-  - Route guards redirect unauthenticated users to login.
-  - Each feature page calls backend CRUD APIs directly through typed frontend API modules.
+---
+
+## Auth (Simple PIN)
+
+- `APP_PIN` stored in `.env`
+- `POST /auth/login` body `{ "pin": "..." }` → verifies against `APP_PIN`, returns `{ "access_token": "...", "token_type": "bearer" }`
+- Token is a plain JWT (HS256) signed with `SECRET_KEY`, 24h expiry, no user claim
+- `get_current_session` FastAPI dependency decodes + validates token on all protected routes
+- Frontend stores token in `localStorage`; Pinia `authStore` exposes `isAuthenticated`
+- Vue Router guard redirects to `/login` if no valid token
+
+---
+
+## API Routes
+
+```
+POST   /auth/login
+
+GET    /accounts              GET    /accounts/{id}
+POST   /accounts              PUT    /accounts/{id}
+DELETE /accounts/{id}
+
+GET    /categories            GET    /categories/{id}
+POST   /categories            PUT    /categories/{id}
+DELETE /categories/{id}
+
+GET    /transactions          GET    /transactions/{id}
+POST   /transactions          PUT    /transactions/{id}
+DELETE /transactions/{id}
+# GET /transactions supports filters: account_id, category_id, type, date_from, date_to
+
+GET    /recurring             GET    /recurring/{id}
+POST   /recurring             PUT    /recurring/{id}
+DELETE /recurring/{id}
+POST   /recurring/{id}/generate   # manually trigger generation
+
+GET    /budgets               GET    /budgets/{id}
+POST   /budgets               PUT    /budgets/{id}
+DELETE /budgets/{id}
+GET    /budgets/{id}/progress     # limit vs spent
+
+GET    /dashboard/summary
+```
+
+---
+
+## Dashboard Summary Response
+
+```json
+{
+  "accounts": [{ "id", "name", "currency", "current_balance" }],
+  "monthly_cashflow": [{ "month": "2026-05", "income": 3000, "expense": 1200 }],
+  "budget_progress": [{ "budget_id", "name", "limit", "spent", "currency" }],
+  "recent_transactions": [ "...last 10..." ]
+}
+```
+
+`current_balance` = `opening_balance + SUM(income transactions) - SUM(expense transactions)`
+
+---
+
+## Recurring Transaction Logic
+
+`services/recurring.py` → `generate_due(db, recurring_id)`:
+1. Load the `RecurringTransaction`
+2. Compute next dates from `last_generated_date` (or `start_date`) up to `today`
+3. Insert a `Transaction` for each due date
+4. Update `last_generated_date`
+
+Called automatically from `GET /transactions` and `GET /dashboard/summary` so data is always current.
+
+---
 
 ## Implementation Order
 
-1. Scaffold backend and frontend directories.
-2. Add backend settings, database connection, Alembic setup, and health route.
-3. Add user model, auth schemas, password hashing, JWT login/register.
-4. Add protected route dependency and `/auth/me`.
-5. Implement account and category CRUD.
-6. Implement transaction CRUD.
-7. Implement budget CRUD.
-8. Implement dashboard summary endpoint.
-9. Scaffold Vue app with router, Pinia, API client, and auth flow.
-10. Build dashboard and CRUD pages.
-11. Add backend tests for auth and core CRUD flows.
-12. Update `README.md` with exact setup commands.
+1. **Backend scaffold** — directory structure, `requirements.txt`, `.env`, `config.py`, `session.py`, Alembic init, `GET /health`
+2. **Auth** — `security.py` PIN verify + JWT, `POST /auth/login`, `get_current_session` dependency
+3. **Account CRUD** — model, schema, router, Alembic migration
+4. **Category CRUD** — model, schema, router, seed defaults
+5. **Transaction CRUD** — model, schema, router (with filters)
+6. **Recurring transactions** — model, schema, generation service, router
+7. **Budget CRUD** — model, schema, router + progress endpoint
+8. **Dashboard summary** — `services/dashboard.py`, `GET /dashboard/summary`
+9. **Backend tests** — conftest with test DB, tests for auth/accounts/transactions/budgets
+10. **Frontend scaffold** — Vite + Vue 3 + TypeScript + PrimeVue, router, Pinia, Axios client
+11. **Auth store + Login page** — PIN input, token storage, route guard
+12. **App layout** — `AppSidebar`, `AppTopbar`, authenticated shell
+13. **Dashboard page** — balance cards, cashflow chart, budget progress bars, recent transactions table
+14. **Accounts page** — DataTable, create/edit dialog, balance display
+15. **Categories page** — list with color/icon, create/edit
+16. **Transactions page** — DataTable with filters (account, category, type, date range), create/edit dialog
+17. **Recurring page** — list with frequency/status, create/edit, manual generate button
+18. **Budgets page** — list by scope/period, progress bars, create/edit dialog
+19. **README** — setup commands for both backend and frontend
 
-## Test Plan
+---
 
-- Backend pytest coverage:
-  - User registration succeeds with valid data.
-  - Duplicate email registration fails.
-  - Login returns JWT for valid credentials.
-  - Protected endpoints reject missing/invalid token.
-  - Users cannot access another user's accounts, categories, transactions, or budgets.
-  - CRUD flows work for accounts, categories, transactions, and budgets.
-  - Dashboard summary returns correct income, expense, balance, and budget values.
+## Dependencies
 
-- Frontend checks:
-  - App builds with `npm run build`.
-  - Login/register flows store auth token.
-  - Protected routes redirect when logged out.
-  - CRUD pages render loading, empty, success, and error states.
+### Backend (`requirements.txt`)
+```
+fastapi
+uvicorn[standard]
+sqlalchemy
+alembic
+pydantic-settings
+python-jose[cryptography]
+passlib[bcrypt]
+pytest
+httpx
+```
 
-## Assumptions
+### Frontend (`package.json`)
+```
+vue, vue-router, pinia
+primevue, primeicons, @primevue/themes
+axios
+chart.js  (via PrimeVue's Chart component)
+typescript, vite, @vitejs/plugin-vue
+```
 
-- MVP uses SQLite locally and PostgreSQL-ready SQLAlchemy models.
-- Backend uses SQLAlchemy rather than SQLModel.
-- Frontend uses Pinia for state management.
-- CSV import/export and advanced charts are phase-two features after the core MVP.
-- The root `main.py` can be removed or ignored once `backend/app/main.py` exists.
+---
+
+## Verification
+
+- **Backend:** `cd backend && uvicorn app.main:app --reload` → `http://localhost:8000/docs`
+- **Tests:** `cd backend && pytest app/tests/ -v`
+- **Frontend:** `cd frontend && npm run dev` → `http://localhost:5173`
+
+### End-to-end checks
+- Login with correct PIN succeeds; wrong PIN is rejected
+- Create an account (e.g. "Savings DE", EUR) — balance starts at `opening_balance`
+- Add income + expense transactions — dashboard balance updates correctly
+- Create a recurring monthly income — call `/generate` or wait for auto-generation — transaction appears
+- Create monthly + annual category and account budgets — progress endpoint reflects spending
+- Dashboard summary returns correct data for all accounts
