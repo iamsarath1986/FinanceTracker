@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.security import get_current_session
 from app.db.session import get_db
 from app.models.account import Account
-from app.schemas.account import AccountOut, AccountCreate
+from app.schemas.account import AccountOut, AccountCreate, AccountUpdate
 
 router = APIRouter(prefix="/accounts", tags=["accounts"], dependencies=[Depends(get_current_session)],)
 
@@ -35,4 +35,21 @@ def create_account(body: AccountCreate, db: Session = Depends(get_db)):
     db.refresh(account)
     return _with_balance(account)
 
-#TODO: add update and delete
+@router.patch("/{account_id}", response_model=AccountOut, status_code=status.HTTP_200_OK)
+def update_account(account_id: int, body: AccountUpdate, db: Session = Depends(get_db)):
+    account = db.get(Account, account_id)
+    if not account:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+    for key, value in body.model_dump(exclude_unset=True).items():
+        setattr(account, key, value)
+    db.commit()
+    db.refresh(account)
+    return _with_balance(account)
+
+@router.delete("/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(account_id: int, db: Session = Depends(get_db)):
+    account = db.get(Account, account_id)
+    if not account:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+    db.delete(account)
+    db.commit()
