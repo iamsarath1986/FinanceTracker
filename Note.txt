@@ -1,2 +1,37 @@
 python3 -m venv .venv
 source .venv/bin/activate
+
+Docker
+======
+    docker compose up -d              # start everything
+    docker compose down               # stop (data volume persists)
+    docker compose down -v            # stop + wipe DB volume
+    docker compose logs -f backend    # tail backend logs
+
+Database (PostgreSQL)
+=====================
+
+Each time we add a model (accounts, transactions, budgets, etc.), the workflow will be:
+
+  # 1. Write the SQLAlchemy model in app/models/
+  # 2. Generate the migration
+  docker compose exec backend alembic revision --autogenerate -m "add accounts table"
+  # 3. Apply it
+  docker compose exec backend alembic upgrade head
+
+  Alembic commands:
+
+  # Roll back the last migration
+  docker compose exec backend alembic downgrade -1
+
+  # See current migration status
+  docker compose exec backend alembic current
+
+API Endpoints
+=============
+http://localhost:8001/auth/login
+http://localhost:8001/accounts
+
+
+
+curl -v -X POST -H "Origin: http://localhost:8086" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODA2NDQwNDJ9.oeOX8xYJZk1mCBao8Z3zRDdEFhPkvaBIwkJxXrCdm2E" -H "Content-Type: application/json" -d "{\"name\":\"Savings\",\"type\":\"savings\",\"bank_name\":\"test\",\"country\":\"UA\",\"currency\":\"AED\",\"opening_balance\":1000}" http://localhost:8001/accounts
