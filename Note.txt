@@ -21,17 +21,64 @@ Each time we add a model (accounts, transactions, budgets, etc.), the workflow w
 
   Alembic commands:
 
+  # Generate a new migration
+  docker compose exec backend alembic revision --autogenerate -m "add categories table"
+
+  # apply it
+  docker exec -it financetracker-backend-1 alembic upgrade head
+
   # Roll back the last migration
   docker compose exec backend alembic downgrade -1
 
   # See current migration status
   docker compose exec backend alembic current
 
+
+Access pgsql shell
+==================
+docker exec -it financetracker-db-1 psql -U financeuser -d financedb
+
+  Once inside, useful commands:
+
+  -- list all tables
+  \dt
+
+  -- check accounts table structure
+  \d accounts
+
+  -- see all data
+  SELECT * FROM accounts;
+
+  -- exit
+  \q
+
 API Endpoints
 =============
 http://localhost:8001/auth/login
 http://localhost:8001/accounts
 
-
-
 curl -v -X POST -H "Origin: http://localhost:8086" -H "Authorization: Bearer <token>" -H "Content-Type: application/json" -d "{\"name\":\"Savings\",\"type\":\"savings\",\"bank_name\":\"test\",\"country\":\"UA\",\"currency\":\"AED\",\"opening_balance\":1000}" http://localhost:8001/accounts
+
+curl -X PATCH http://localhost:8001/accounts/9 \
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{"name":"Updated Savings","opening_balance":2000}'
+
+
+TODO:
+
+  Done:
+  - Step 1 — Backend scaffold
+  - Step 2 — Auth (POST /auth/login, JWT, get_current_session)
+  - Step 3 — Account CRUD (just completed — all 5 endpoints working and tested)
+
+  Next step: Step 4 — Category CRUD
+
+  What that involves:
+
+  4. Seed defaults — insert default income/expense categories on first run
+  5. Alembic migration — new migration for the categories table
+  6. Register router in main.py
+
+  Steps 5–8 (transactions, recurring, budgets, dashboard) all depend on categories being in place first,
+  since transactions and budgets reference category_id.

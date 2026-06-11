@@ -7,7 +7,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.api import auth
 from app.core.limiter import limiter
-from app.api import accounts
+from app.api import accounts, categories
 
 ALLOW_ORIGINS = [
     "http://localhost:5173",
@@ -90,6 +90,7 @@ app.add_middleware(EnsureCorsOnErrors, allow_origins=ALLOW_ORIGINS)
 
 app.include_router(auth.router)
 app.include_router(accounts.router)
+app.include_router(categories.router)
 
 
 @app.get("/health")
