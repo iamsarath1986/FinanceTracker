@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -5,12 +7,14 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.api import auth
+from app.api import accounts, auth, budgets, categories, dashboard, recurring, transactions
 from app.core.limiter import limiter
-from app.api import accounts
+from app.db.seed import seed_categories
+from app.db.session import SessionLocal
 
 ALLOW_ORIGINS = [
     "http://localhost:5173",
+    "http://localhost:5174",
     "http://localhost:8086",
     "https://ssfwj.assmt.munnich.it",
 ]
@@ -58,10 +62,10 @@ class EnsureCorsOnErrors:
 
         try:
             await self.app(scope, receive, send_with_cors)
-        except Exception as exc:
+        except Exception:
             response = JSONResponse(
                 status_code=500,
-                content={"detail": str(exc)},
+                content={"detail": "Internal server error"},
                 headers={
                     "Access-Control-Allow-Origin": origin,
                     "Access-Control-Allow-Credentials": "true",
@@ -70,7 +74,17 @@ class EnsureCorsOnErrors:
             await response(scope, receive, send)
 
 
-app = FastAPI(title="FinanceTracker API", version="1.0.0", redirect_slashes=False)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db = SessionLocal()
+    try:
+        seed_categories(db)
+    finally:
+        db.close()
+    yield
+
+
+app = FastAPI(title="FinanceTracker API", version="1.0.0", redirect_slashes=False, lifespan=lifespan)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -90,6 +104,11 @@ app.add_middleware(EnsureCorsOnErrors, allow_origins=ALLOW_ORIGINS)
 
 app.include_router(auth.router)
 app.include_router(accounts.router)
+app.include_router(categories.router)
+app.include_router(transactions.router)
+app.include_router(recurring.router)
+app.include_router(budgets.router)
+app.include_router(dashboard.router)
 
 
 @app.get("/health")
