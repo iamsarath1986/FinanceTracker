@@ -1,7 +1,3 @@
-<script setup lang="ts">
-import { Plus } from 'lucide-vue-next';
-</script>
-
 <template>
   <section class="panel add-transaction" aria-labelledby="add-transaction-title">
     <h2 id="add-transaction-title" class="section-title">Add Transaction</h2>
@@ -37,7 +33,7 @@ import { Plus } from 'lucide-vue-next';
       </label>
 
       <button class="add-button" type="submit">
-        <Plus :size="18" :stroke-width="2.5" />
+        <i class="pi pi-plus" aria-hidden="true" />
         <span>Add</span>
       </button>
     </form>

@@ -1,4 +1,4 @@
-import type { Transaction } from '../types';
+import type { LegacyTransaction as Transaction } from '../types/legacy';
 
 export const transactions: Transaction[] = [
   {
