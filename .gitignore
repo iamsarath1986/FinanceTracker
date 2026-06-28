@@ -53,3 +53,7 @@ pnpm-debug.log*
 
 # OS files
 Thumbs.db
+
+# Agents
+AGENTS.md
+CLAUDE.md

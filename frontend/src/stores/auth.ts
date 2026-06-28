@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
+import api from '../api/client'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -10,7 +10,7 @@ export const useAuthStore = defineStore('auth', {
   },
   actions: {
     async login(password: string) {
-      const res = await axios.post('http://localhost:8001/auth/login', { password })
+      const res = await api.post('/auth/login', { password })
       this.token = res.data.access_token
       localStorage.setItem('finance_token', this.token!)
     },

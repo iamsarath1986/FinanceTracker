@@ -40,7 +40,7 @@ const form = ref({
   year: new Date().getFullYear(),
   month: new Date().getMonth() + 1 as number | null,
   limit_amount: 0,
-  currency: 'USD',
+  currency: 'AED',
 })
 
 async function load() {
@@ -50,7 +50,7 @@ async function load() {
 
 function openNew() {
   editing.value = null
-  form.value = { name: '', scope_type: 'category', period_type: 'monthly', category_id: null, account_id: null, year: new Date().getFullYear(), month: new Date().getMonth() + 1, limit_amount: 0, currency: 'USD' }
+  form.value = { name: '', scope_type: 'category', period_type: 'monthly', category_id: null, account_id: null, year: new Date().getFullYear(), month: new Date().getMonth() + 1, limit_amount: 0, currency: 'AED' }
   dialogVisible.value = true
 }
 
@@ -113,7 +113,6 @@ onMounted(async () => {
       <DataTable :value="budgets" :loading="loading" striped-rows>
           <Column field="name" header="Name" />
           <Column field="scope_type" header="Scope" />
-          <Column field="period_type" header="Period" />
           <Column header="Period">
             <template #body="{ data }">{{ data.year }}{{ data.month ? '-' + String(data.month).padStart(2, '0') : '' }}</template>
           </Column>

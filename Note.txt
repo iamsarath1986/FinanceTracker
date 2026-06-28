@@ -8,6 +8,33 @@ Docker
     docker compose down -v            # stop + wipe DB volume
     docker compose logs -f backend    # tail backend logs
 
+rebuild will not delete your database data.
+
+  Safe commands:
+
+  docker compose up -d --build
+  docker compose up -d --force-recreate
+  docker compose restart
+
+  Your Postgres data is stored in the named Docker volume:
+
+  volumes:
+    - postgres_data:/var/lib/postgresql/data
+
+  Data is lost only if you remove that volume, for example:
+
+  docker compose down -v
+
+  or manually delete the Docker volume.
+
+  So for rebuilds, use:
+
+  docker compose up -d --build
+
+  Avoid docker compose down -v unless you intentionally want a fresh
+  empty database.
+
+
 Database (PostgreSQL)
 =====================
 
@@ -25,7 +52,10 @@ Each time we add a model (accounts, transactions, budgets, etc.), the workflow w
   docker compose exec backend alembic revision --autogenerate -m "add categories table"
 
   # apply it
-  docker exec -it financetracker-backend-1 alembic upgrade head
+  docker exec -T backend alembic upgrade head
+
+  # Restart backend
+  docker compose restart backend
 
   # Roll back the last migration
   docker compose exec backend alembic downgrade -1
@@ -56,10 +86,3 @@ API Endpoints
 =============
 http://localhost:8001/auth/login
 http://localhost:8001/accounts
-
-curl -v -X POST -H "Origin: http://localhost:8086" -H "Authorization: Bearer <token>" -H "Content-Type: application/json" -d "{\"name\":\"Savings\",\"type\":\"savings\",\"bank_name\":\"test\",\"country\":\"UA\",\"currency\":\"AED\",\"opening_balance\":1000}" http://localhost:8001/accounts
-
-curl -X PATCH http://localhost:8001/accounts/9 \
-    -H "Authorization: Bearer <token>" \
-    -H "Content-Type: application/json" \
-    -d '{"name":"Updated Savings","opening_balance":2000}'
